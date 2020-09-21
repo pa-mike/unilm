@@ -1,3 +1,5 @@
+#@title Code for modifed run_seq_labeling
+# noqa C901
 # coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
@@ -18,6 +20,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+from types import SimpleNamespace
 import glob
 import logging
 import os
@@ -392,199 +395,274 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
     return results, preds_list
 
 
-def main():  # noqa C901
-    parser = argparse.ArgumentParser()
 
-    ## Required parameters
-    parser.add_argument(
-        "--data_dir",
-        default=None,
-        type=str,
-        required=True,
-        help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",
-    )
-    parser.add_argument(
-        "--model_type",
-        default=None,
-        type=str,
-        required=True,
-        help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()),
-    )
-    parser.add_argument(
-        "--model_name_or_path",
-        default=None,
-        type=str,
-        required=True,
-        help="Path to pre-trained model or shortcut name selected in the list: "
-        + ", ".join(ALL_MODELS),
-    )
-    parser.add_argument(
-        "--output_dir",
-        default=None,
-        type=str,
-        required=True,
-        help="The output directory where the model predictions and checkpoints will be written.",
-    )
+def run_seq_labeling_modified(
+        data_dir:str,  # The input data dir. Should contain the training files for the CoNLL-2003 NER task.
+        model_type:str,  # Model type selected in the list: MODEL_CLASSES.keys().
+        model_name_or_path:str,  # Path to pre-trained model or shortcut name selected in the list ALL_MODELS.
+        output_dir:str,  # The output directory where the model predictions and checkpoints will be written.
+        labels:str = '',  # Path to a file containing all labels. If not specified, CoNLL-2003 labels are used.
+        config_name:str = '',  # Pretrained config name or path if not the same as model_name.
+        tokenizer_name:str = '',  # Pretrained tokenizer name or path if not the same as model_name.
+        cache_dir:str = '',  # Where do you want to store the pre-trained models downloaded from s3.
+        max_seq_length:int = 512,  # The maximum total input sequence length after tokenization. Sequences longer than this will be truncated, sequences shorter will be padded.
+        do_train:bool = True,  # Whether to run training.
+        do_eval:bool = True,  # Whether to run eval on the dev set.
+        do_predict:bool = True,  # Whether to run predictions on the test set.
+        evaluate_during_training:bool = True,  # Whether to run evaluation during training at each logging step.
+        do_lower_case:bool = True,  # Set this flag if you are using an uncased model.
+        per_gpu_train_batch_size:int = 8,  # Batch size per GPU/CPU for training.
+        per_gpu_eval_batch_size:int = 8,  # Batch size per GPU/CPU for evaluation.
+        gradient_accumulation_steps:int = 1,  # Number of updates steps to accumulate before performing a backward/update pass.
+        learning_rate:float = 5e-5,  # The initial learning rate for Adam.
+        weight_decay:float = 0.0,  # Weight decay if we apply some.
+        adam_epsilon:float = 1e-8,  # Epsilon for Adam optimizer.
+        max_grad_norm:float = 1.0,  # Max gradient norm.
+        num_train_epochs:float = 3.0,  # Total number of training epochs to perform.
+        max_steps:int = -1,  # If > 0: set total number of training steps to perform. Override num_train_epochs.
+        warmup_steps:int = 0,  # Linear warmup over warmup_steps.
+        logging_steps:int = 50,  # Log every X updates steps.
+        save_steps:int = 50,  # Save checkpoint every X updates steps.
+        eval_all_checkpoints:bool = True,  # Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number.
+        no_cuda:bool = True,  # Avoid using CUDA when available.
+        overwrite_output_dir:bool = True,  # Overwrite the content of the output directory.
+        overwrite_cache:bool = True,  # Overwrite the cached training and evaluation sets.
+        seed:int = 42,  # Random seed for initialization.
+        fp16:bool = True,  # Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit
+        fp16_opt_level:str = '01',  # For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']. See details at https://nvidia.github.io/apex/amp.html.
+        local_rank:int = -1,  # For distributed training: local_rank
+        server_ip:str = '',  # For distant debugging.
+        server_port:str = '',  # For distant debugging.
+):
+    # noqa C901
+    # parser = argparse.ArgumentParser()
+    #
+    # # Required parameters
+    # parser.add_argument(
+    #     "--data_dir",
+    #     default=None,
+    #     type=str,
+    #     required=True,
+    #     help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",
+    # )
+    # parser.add_argument(
+    #     "--model_type",
+    #     default=None,
+    #     type=str,
+    #     required=True,
+    #     help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()),
+    # )
+    # parser.add_argument(
+    #     "--model_name_or_path",
+    #     default=None,
+    #     type=str,
+    #     required=True,
+    #     help="Path to pre-trained model or shortcut name selected in the list: "
+    #     + ", ".join(ALL_MODELS),
+    # )
+    # parser.add_argument(
+    #     "--output_dir",
+    #     default=None,
+    #     type=str,
+    #     required=True,
+    #     help="The output directory where the model predictions and checkpoints will be written.",
+    # )
+    #
+    # # Other parameters
+    # parser.add_argument(
+    #     "--labels",
+    #     default="",
+    #     type=str,
+    #     help="Path to a file containing all labels. If not specified, CoNLL-2003 labels are used.",
+    # )
+    # parser.add_argument(
+    #     "--config_name",
+    #     default="",
+    #     type=str,
+    #     help="",
+    # )
+    # parser.add_argument(
+    #     "--tokenizer_name",
+    #     default="",
+    #     type=str,
+    #     help="Pretrained tokenizer name or path if not the same as model_name",
+    # )
+    # parser.add_argument(
+    #     "--cache_dir",
+    #     default="",
+    #     type=str,
+    #     help="Where do you want to store the pre-trained models downloaded from s3",
+    # )
+    # parser.add_argument(
+    #     "--max_seq_length",
+    #     default=512,
+    #     type=int,
+    #     help="The maximum total input sequence length after tokenization. Sequences longer "
+    #     "than this will be truncated, sequences shorter will be padded.",
+    # )
+    # parser.add_argument(
+    #     "--do_train", action="store_true", help="Whether to run training."
+    # )
+    # parser.add_argument(
+    #     "--do_eval", action="store_true", help="Whether to run eval on the dev set."
+    # )
+    # parser.add_argument(
+    #     "--do_predict",
+    #     action="store_true",
+    #     help="Whether to run predictions on the test set.",
+    # )
+    # parser.add_argument(
+    #     "--evaluate_during_training",
+    #     action="store_true",
+    #     help="Whether to run evaluation during training at each logging step.",
+    # )
+    # parser.add_argument(
+    #     "--do_lower_case",
+    #     action="store_true",
+    #     help="Set this flag if you are using an uncased model.",
+    # )
+    # parser.add_argument(
+    #     "--per_gpu_train_batch_size",
+    #     default=8,
+    #     type=int,
+    #     help="Batch size per GPU/CPU for training.",
+    # )
+    # parser.add_argument(
+    #     "--per_gpu_eval_batch_size",
+    #     default=8,
+    #     type=int,
+    #     help="Batch size per GPU/CPU for evaluation.",
+    # )
+    # parser.add_argument(
+    #     "--gradient_accumulation_steps",
+    #     type=int,
+    #     default=1,
+    #     help="Number of updates steps to accumulate before performing a backward/update pass.",
+    # )
+    # parser.add_argument(
+    #     "--learning_rate",
+    #     default=5e-5,
+    #     type=float,
+    #     help="The initial learning rate for Adam.",
+    # )
+    # parser.add_argument(
+    #     "--weight_decay", default=0.0, type=float, help="Weight decay if we apply some."
+    # )
+    # parser.add_argument(
+    #     "--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer."
+    # )
+    # parser.add_argument(
+    #     "--max_grad_norm", default=1.0, type=float, help="Max gradient norm."
+    # )
+    # parser.add_argument(
+    #     "--num_train_epochs",
+    #     default=3.0,
+    #     type=float,
+    #     help="Total number of training epochs to perform.",
+    # )
+    # parser.add_argument(
+    #     "--max_steps",
+    #     default=-1,
+    #     type=int,
+    #     help="If > 0: set total number of training steps to perform. Override num_train_epochs.",
+    # )
+    # parser.add_argument(
+    #     "--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps."
+    # )
+    #
+    # parser.add_argument(
+    #     "--logging_steps", type=int, default=50, help="Log every X updates steps."
+    # )
+    # parser.add_argument(
+    #     "--save_steps",
+    #     type=int,
+    #     default=50,
+    #     help="Save checkpoint every X updates steps.",
+    # )
+    # parser.add_argument(
+    #     "--eval_all_checkpoints",
+    #     action="store_true",
+    #     help="Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number",
+    # )#
+    # parser.add_argument(
+    #     "--no_cuda", action="store_true", help="Avoid using CUDA when available"
+    # )
+    # parser.add_argument(
+    #     "--overwrite_output_dir",
+    #     action="store_true",
+    #     help="Overwrite the content of the output directory",
+    # )
+    # parser.add_argument(
+    #     "--overwrite_cache",
+    #     action="store_true",
+    #     help="Overwrite the cached training and evaluation sets",
+    # )
+    # parser.add_argument(
+    #     "--seed", type=int, default=42, help="random seed for initialization"
+    # )
+    # parser.add_argument(
+    #     "--fp16",
+    #     action="store_true",
+    #     help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit",
+    # )
+    # parser.add_argument(
+    #     "--fp16_opt_level",
+    #     type=str,
+    #     default="O1",
+    #     help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
+    #     "See details at https://nvidia.github.io/apex/amp.html",
+    # )
+    # parser.add_argument(
+    #     "--local_rank",
+    #     type=int,
+    #     default=-1,
+    #     help="For distributed training: local_rank",
+    # )
+    # parser.add_argument(
+    #     "--server_ip", type=str, default="", help="For distant debugging."
+    # )
+    # parser.add_argument(
+    #     "--server_port", type=str, default="", help="For distant debugging."
+    # )
 
-    ## Other parameters
-    parser.add_argument(
-        "--labels",
-        default="",
-        type=str,
-        help="Path to a file containing all labels. If not specified, CoNLL-2003 labels are used.",
+    args = SimpleNamespace(
+        data_dir=data_dir,  # The input data dir. Should contain the training files for the CoNLL-2003 NER task.
+        model_type=model_type,  # Model type selected in the list: " + ", ".join(layoutlm.run_seq_labeling.MODEL_CLASSES.keys())
+        model_name_or_path=model_name_or_path,  # Path to pre-trained model or shortcut name selected in the list: " + ", ".join(layoutlm.run_seq_labeling.ALL_MODELS),
+        output_dir=output_dir,  # The output directory where the model predictions and checkpoints will be written.
+        labels=labels,  # Path to a file containing all labels. If not specified, CoNLL-2003 labels are used.
+        config_name=config_name,  # Pretrained config name or path if not the same as model_name
+        tokenizer_name=tokenizer_name,  # Pretrained tokenizer name or path if not the same as model_name
+        cache_dir=cache_dir,  # Where do you want to store the pre-trained models downloaded from s3
+        max_seq_length=max_seq_length,  # The maximum total input sequence length after tokenization. Sequences longer than this will be truncated, sequences shorter will be padded.
+        do_train=do_train,  # Whether to run training.
+        do_eval=do_eval,  # Whether to run eval on the dev set.
+        do_predict=do_predict,  # Whether to run predictions on the test set.
+        evaluate_during_training=evaluate_during_training,  # Whether to run evaluation during training at each logging step.
+        do_lower_case=do_lower_case,  # Set this flag if you are using an uncased model.
+        per_gpu_train_batch_size=per_gpu_train_batch_size,  # Batch size per GPU/CPU for training.
+        per_gpu_eval_batch_size=per_gpu_eval_batch_size,  # Batch size per GPU/CPU for evaluation.
+        gradient_accumulation_steps=gradient_accumulation_steps,  # Number of updates steps to accumulate before performing a backward/update pass.
+        learning_rate=learning_rate,  # The initial learning rate for Adam.
+        weight_decay=weight_decay,  # Weight decay if we apply some.
+        adam_epsilon=adam_epsilon,  # Epsilon for Adam optimizer.
+        max_grad_norm=max_grad_norm,  # Max gradient norm.
+        num_train_epochs=num_train_epochs,  # Total number of training epochs to perform.
+        max_steps=max_steps,  # If > 0: set total number of training steps to perform. Override num_train_epochs.
+        warmup_steps=warmup_steps,  # Linear warmup over warmup_steps.
+        logging_steps=logging_steps,  # Log every X updates steps.
+        save_steps=save_steps,  # Save checkpoint every X updates steps.
+        eval_all_checkpoints=eval_all_checkpoints,  # Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number
+        no_cuda=no_cuda,  # Avoid using CUDA when available
+        overwrite_output_dir=overwrite_output_dir,  # Overwrite the content of the output directory
+        overwrite_cache=overwrite_cache,  # Overwrite the cached training and evaluation sets
+        seed=seed,  # random seed for initialization
+        fp16=fp16,  # Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit
+        fp16_opt_level=fp16_opt_level,  # For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3'].
+        local_rank=local_rank,  # For distributed training: local_rank
+        server_ip=server_ip,  # For distant debugging.
+        server_port=server_port  # For distant debugging.
     )
-    parser.add_argument(
-        "--config_name",
-        default="",
-        type=str,
-        help="Pretrained config name or path if not the same as model_name",
-    )
-    parser.add_argument(
-        "--tokenizer_name",
-        default="",
-        type=str,
-        help="Pretrained tokenizer name or path if not the same as model_name",
-    )
-    parser.add_argument(
-        "--cache_dir",
-        default="",
-        type=str,
-        help="Where do you want to store the pre-trained models downloaded from s3",
-    )
-    parser.add_argument(
-        "--max_seq_length",
-        default=512,
-        type=int,
-        help="The maximum total input sequence length after tokenization. Sequences longer "
-        "than this will be truncated, sequences shorter will be padded.",
-    )
-    parser.add_argument(
-        "--do_train", action="store_true", help="Whether to run training."
-    )
-    parser.add_argument(
-        "--do_eval", action="store_true", help="Whether to run eval on the dev set."
-    )
-    parser.add_argument(
-        "--do_predict",
-        action="store_true",
-        help="Whether to run predictions on the test set.",
-    )
-    parser.add_argument(
-        "--evaluate_during_training",
-        action="store_true",
-        help="Whether to run evaluation during training at each logging step.",
-    )
-    parser.add_argument(
-        "--do_lower_case",
-        action="store_true",
-        help="Set this flag if you are using an uncased model.",
-    )
-
-    parser.add_argument(
-        "--per_gpu_train_batch_size",
-        default=8,
-        type=int,
-        help="Batch size per GPU/CPU for training.",
-    )
-    parser.add_argument(
-        "--per_gpu_eval_batch_size",
-        default=8,
-        type=int,
-        help="Batch size per GPU/CPU for evaluation.",
-    )
-    parser.add_argument(
-        "--gradient_accumulation_steps",
-        type=int,
-        default=1,
-        help="Number of updates steps to accumulate before performing a backward/update pass.",
-    )
-    parser.add_argument(
-        "--learning_rate",
-        default=5e-5,
-        type=float,
-        help="The initial learning rate for Adam.",
-    )
-    parser.add_argument(
-        "--weight_decay", default=0.0, type=float, help="Weight decay if we apply some."
-    )
-    parser.add_argument(
-        "--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer."
-    )
-    parser.add_argument(
-        "--max_grad_norm", default=1.0, type=float, help="Max gradient norm."
-    )
-    parser.add_argument(
-        "--num_train_epochs",
-        default=3.0,
-        type=float,
-        help="Total number of training epochs to perform.",
-    )
-    parser.add_argument(
-        "--max_steps",
-        default=-1,
-        type=int,
-        help="If > 0: set total number of training steps to perform. Override num_train_epochs.",
-    )
-    parser.add_argument(
-        "--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps."
-    )
-
-    parser.add_argument(
-        "--logging_steps", type=int, default=50, help="Log every X updates steps."
-    )
-    parser.add_argument(
-        "--save_steps",
-        type=int,
-        default=50,
-        help="Save checkpoint every X updates steps.",
-    )
-    parser.add_argument(
-        "--eval_all_checkpoints",
-        action="store_true",
-        help="Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number",
-    )
-    parser.add_argument(
-        "--no_cuda", action="store_true", help="Avoid using CUDA when available"
-    )
-    parser.add_argument(
-        "--overwrite_output_dir",
-        action="store_true",
-        help="Overwrite the content of the output directory",
-    )
-    parser.add_argument(
-        "--overwrite_cache",
-        action="store_true",
-        help="Overwrite the cached training and evaluation sets",
-    )
-    parser.add_argument(
-        "--seed", type=int, default=42, help="random seed for initialization"
-    )
-
-    parser.add_argument(
-        "--fp16",
-        action="store_true",
-        help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit",
-    )
-    parser.add_argument(
-        "--fp16_opt_level",
-        type=str,
-        default="O1",
-        help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
-        "See details at https://nvidia.github.io/apex/amp.html",
-    )
-    parser.add_argument(
-        "--local_rank",
-        type=int,
-        default=-1,
-        help="For distributed training: local_rank",
-    )
-    parser.add_argument(
-        "--server_ip", type=str, default="", help="For distant debugging."
-    )
-    parser.add_argument(
-        "--server_port", type=str, default="", help="For distant debugging."
-    )
-    args = parser.parse_args()
 
     if (
         os.path.exists(args.output_dir)
@@ -807,5 +885,5 @@ def main():  # noqa C901
     return results
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

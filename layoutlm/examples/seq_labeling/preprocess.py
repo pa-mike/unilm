@@ -5,7 +5,6 @@ import os
 from PIL import Image
 from transformers import AutoTokenizer
 
-
 def bbox_string(box, width, length):
     return (
         str(int(1000 * (box[0] / width)))
@@ -199,6 +198,46 @@ def seg(args):
         tokenizer,
         args.max_len,
     )
+
+#@title Does preprocess.sh in our cool new module way
+
+start = time.time() # Measure how long it takes to install apex
+
+def run_preprocess():
+    import layoutlm
+    from types import SimpleNamespace
+    !wget https://guillaumejaume.github.io/FUNSD/dataset.zip
+    !unzip dataset.zip && mv dataset data && rm -rf dataset.zip __MACOSX
+
+    layoutlm.preprocess.convert(SimpleNamespace(data_dir="/content/data/training_data/annotations/",
+        data_split="train",
+        output_dir="data",
+        model_name_or_path="bert-base-uncased",
+        max_len=510))
+    layoutlm.preprocess.seg(SimpleNamespace(data_dir="/content/data/training_data/annotations/",
+        data_split="train",
+        output_dir="data",
+        model_name_or_path="bert-base-uncased",
+        max_len=510))
+
+    layoutlm.preprocess.convert(SimpleNamespace(data_dir="/content/data/testing_data/annotations/",
+        data_split="test",
+        output_dir="data",
+        model_name_or_path="bert-base-uncased",
+        max_len=510))
+    layoutlm.preprocess.seg(SimpleNamespace(data_dir="/content/data/testing_data/annotations/",
+        data_split="test",
+        output_dir="data",
+        model_name_or_path="bert-base-uncased",
+        max_len=510))
+
+    %cat data/train.txt | cut -d$'\t' -f 2 | grep -v "^$"| sort | uniq > data/labels.txt
+
+    end = time.time()
+    print(timeFunction(start,end))
+
+
+
 
 
 if __name__ == "__main__":
