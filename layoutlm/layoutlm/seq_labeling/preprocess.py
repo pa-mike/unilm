@@ -1,10 +1,6 @@
 import argparse
 import json
 import os
-from io import BytesIO
-from urllib.request import urlopen
-from zipfile import ZipFile
-from types import SimpleNamespace
 
 from PIL import Image
 from transformers import AutoTokenizer
@@ -203,51 +199,45 @@ def seg(args):
         args.max_len,
     )
 
+#@title Does preprocess.sh in our cool new module way
 
-def get_funsd_dataset(zipurl = 'https://guillaumejaume.github.io/FUNSD/dataset.zip', save_path='./', chunk_size=128):
-    with urlopen(zipurl) as zipresp:
-        with ZipFile(BytesIO(zipresp.read())) as zfile:
-            zfile.extractall(save_path)
+start = time.time() # Measure how long it takes to install apex
 
+def run_preprocess():
+    import layoutlm
+    from types import SimpleNamespace
+    !wget https://guillaumejaume.github.io/FUNSD/dataset.zip
+    !unzip dataset.zip && mv dataset data && rm -rf dataset.zip __MACOSX
 
-def run_preprocess_funsd(save_path):
-    get_funsd_dataset(save_path=save_path)
-    convert(SimpleNamespace(data_dir=os.path.join(save_path,"/data/training_data/annotations/"),
+    layoutlm.preprocess.convert(SimpleNamespace(data_dir="/content/data/training_data/annotations/",
         data_split="train",
         output_dir="data",
         model_name_or_path="bert-base-uncased",
         max_len=510))
-    seg(SimpleNamespace(data_dir=os.path.join(save_path,"/data/training_data/annotations/"),
+    layoutlm.preprocess.seg(SimpleNamespace(data_dir="/content/data/training_data/annotations/",
         data_split="train",
         output_dir="data",
         model_name_or_path="bert-base-uncased",
         max_len=510))
 
-    convert(SimpleNamespace(data_dir=os.path.join(save_path,"/data/testing_data/annotations/"),
+    layoutlm.preprocess.convert(SimpleNamespace(data_dir="/content/data/testing_data/annotations/",
         data_split="test",
         output_dir="data",
         model_name_or_path="bert-base-uncased",
         max_len=510))
-    seg(SimpleNamespace(data_dir=os.path.join(save_path,"/data/testing_data/annotations/"),
+    layoutlm.preprocess.seg(SimpleNamespace(data_dir="/content/data/testing_data/annotations/",
         data_split="test",
         output_dir="data",
         model_name_or_path="bert-base-uncased",
         max_len=510))
 
-    # # read file -> cut out all tabs -> read lines into STDOUT -> sort alphabetically -> remove dupes -> move to file
-    # %cat data/train.txt | cut -d$'\t' -f 2 | grep -v "^$"| sort | uniq > data/labels.txt
-    clean_input(os.path.join(save_path, 'data/train.txt'), os.path.join(save_path, 'data/labels.txt'))
+    %cat data/train.txt | cut -d$'\t' -f 2 | grep -v "^$"| sort | uniq > data/labels.txt
+
+    end = time.time()
+    print(timeFunction(start,end))
 
 
-def clean_input(input_text, output_labels):
-    lines = []
-    with open(input_text, 'r') as input_file:
-        lines.append(input_file.strip())  # MIGHT BE BROKEN
-    lines = list(dict.fromkeys(lines))    # ADD REMOVE DUPLICATES
-    lines.sort()
-    with open(output_labels, 'w') as output:
-        for line in lines:
-            output.write("%s\n" % line)
+
 
 
 if __name__ == "__main__":

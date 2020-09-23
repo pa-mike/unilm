@@ -396,7 +396,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
 
 
 
-def run_seq_labeling(
+def run_seq_labeling_modified(
         data_dir:str,  # The input data dir. Should contain the training files for the CoNLL-2003 NER task.
         model_type:str,  # Model type selected in the list: MODEL_CLASSES.keys().
         model_name_or_path:str,  # Path to pre-trained model or shortcut name selected in the list ALL_MODELS.
