@@ -6,7 +6,7 @@ torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 assert torch_ver >= [1, 4], "Requires PyTorch >= 1.4"
 
 setup(
-    name="layoutlm",
+    name="layoutlm2",
     version="0.0",
     author="Yiheng Xu",
     url="https://github.com/microsoft/unilm/tree/master/layoutlm",

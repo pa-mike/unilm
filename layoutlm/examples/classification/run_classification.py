@@ -25,7 +25,7 @@ from transformers import (
 )
 
 from layoutlm import LayoutlmConfig, LayoutlmForSequenceClassification
-from layoutlm.data.rvl_cdip import CdipProcessor, load_and_cache_examples
+from layoutlm.data import CdipProcessor, load_and_cache_examples
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -46,7 +46,7 @@ ALL_MODELS = sum(
 MODEL_CLASSES = {
     "bert": (BertConfig, BertForSequenceClassification, BertTokenizerFast),
     "roberta": (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
-    "layoutlm": (LayoutlmConfig, LayoutlmForSequenceClassification, BertTokenizerFast),
+    "layoutlm2": (LayoutlmConfig, LayoutlmForSequenceClassification, BertTokenizerFast),
 }
 
 
@@ -170,7 +170,7 @@ def train(args, train_dataset, model, tokenizer):  # noqa C901
         )
         for step, batch in enumerate(epoch_iterator):
             model.train()
-            if args.model_type != "layoutlm":
+            if args.model_type != "layoutlm2":
                 batch = batch[:4]
             batch = tuple(t.to(args.device) for t in batch)
             inputs = {
@@ -178,10 +178,10 @@ def train(args, train_dataset, model, tokenizer):  # noqa C901
                 "attention_mask": batch[1],
                 "labels": batch[3],
             }
-            if args.model_type == "layoutlm":
+            if args.model_type == "layoutlm2":
                 inputs["bbox"] = batch[4]
             inputs["token_type_ids"] = (
-                batch[2] if args.model_type in ["bert", "layoutlm"] else None
+                batch[2] if args.model_type in ["bert", "layoutlm2"] else None
             )  # RoBERTa don't use segment_ids
             outputs = model(**inputs)
             loss = outputs[
@@ -288,7 +288,7 @@ def evaluate(args, model, tokenizer, mode, prefix=""):
     out_label_ids = None
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
         model.eval()
-        if args.model_type != "layoutlm":
+        if args.model_type != "layoutlm2":
             batch = batch[:4]
         batch = tuple(t.to(args.device) for t in batch)
 
@@ -298,10 +298,10 @@ def evaluate(args, model, tokenizer, mode, prefix=""):
                 "attention_mask": batch[1],
                 "labels": batch[3],
             }
-            if args.model_type == "layoutlm":
+            if args.model_type == "layoutlm2":
                 inputs["bbox"] = batch[4]
             inputs["token_type_ids"] = (
-                batch[2] if args.model_type in ["bert", "layoutlm"] else None
+                batch[2] if args.model_type in ["bert", "layoutlm2"] else None
             )  # RoBERTa don"t use segment_ids
             outputs = model(**inputs)
             tmp_eval_loss, logits = outputs[:2]
