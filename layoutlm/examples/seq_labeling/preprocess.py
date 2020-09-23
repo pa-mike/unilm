@@ -1,8 +1,9 @@
 import argparse
 import json
 import os
-import requests
-import zipfile
+from io import BytesIO
+from urllib.request import urlopen
+from zipfile import ZipFile
 from types import SimpleNamespace
 
 from PIL import Image
@@ -204,9 +205,6 @@ def seg(args):
 
 
 def get_funsd_dataset(zipurl = 'https://guillaumejaume.github.io/FUNSD/dataset.zip', save_path='./', chunk_size=128):
-    from io import BytesIO
-    from urllib.request import urlopen
-    from zipfile import ZipFile
     with urlopen(zipurl) as zipresp:
         with ZipFile(BytesIO(zipresp.read())) as zfile:
             zfile.extractall(save_path)
