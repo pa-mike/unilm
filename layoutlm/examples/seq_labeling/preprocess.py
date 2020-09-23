@@ -238,19 +238,18 @@ def run_preprocess_funsd(save_path):
 
     # # read file -> cut out all tabs -> read lines into STDOUT -> sort alphabetically -> remove dupes -> move to file
     # %cat data/train.txt | cut -d$'\t' -f 2 | grep -v "^$"| sort | uniq > data/labels.txt
-
-    def clean_input(input_text, output_labels):
-        lines = []
-        with open(input_text, 'r') as input_file:
-            lines.append(input_file.strip())
-        lines = list(dict.fromkeys(lines))
-        lines.sort()
-        with open(output_labels, 'w') as output:
-            for line in lines:
-                output.write("%s\n" % line)
+    clean_input(os.path.join(save_path, 'data/train.txt'), os.path.join(save_path, 'data/labels.txt'))
 
 
-
+def clean_input(input_text, output_labels):
+    lines = []
+    with open(input_text, 'r') as input_file:
+        lines.append(input_file.strip())  # MIGHT BE BROKEN
+    lines = list(dict.fromkeys(lines))    # ADD REMOVE DUPLICATES
+    lines.sort()
+    with open(output_labels, 'w') as output:
+        for line in lines:
+            output.write("%s\n" % line)
 
 
 if __name__ == "__main__":
