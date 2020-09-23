@@ -67,7 +67,7 @@ ALL_MODELS = sum(
 MODEL_CLASSES = {
     "bert": (BertConfig, BertForTokenClassification, BertTokenizer),
     "roberta": (RobertaConfig, RobertaForTokenClassification, RobertaTokenizer),
-    "layoutlm": (LayoutlmConfig, LayoutlmForTokenClassification, BertTokenizer),
+    "layoutlm2": (LayoutlmConfig, LayoutlmForTokenClassification, BertTokenizer),
 }
 
 
@@ -213,10 +213,10 @@ def train(  # noqa C901
                 "attention_mask": batch[1].to(args.device),
                 "labels": batch[3].to(args.device),
             }
-            if args.model_type in ["layoutlm"]:
+            if args.model_type in ["layoutlm2"]:
                 inputs["bbox"] = batch[4].to(args.device)
             inputs["token_type_ids"] = (
-                batch[2].to(args.device) if args.model_type in ["bert", "layoutlm"] else None
+                batch[2].to(args.device) if args.model_type in ["bert", "layoutlm2"] else None
             )  # RoBERTa don"t use segment_ids
 
             outputs = model(**inputs)
@@ -338,11 +338,11 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
                 "attention_mask": batch[1].to(args.device),
                 "labels": batch[3].to(args.device),
             }
-            if args.model_type in ["layoutlm"]:
+            if args.model_type in ["layoutlm2"]:
                 inputs["bbox"] = batch[4].to(args.device)
             inputs["token_type_ids"] = (
                 batch[2].to(args.device)
-                if args.model_type in ["bert", "layoutlm"]
+                if args.model_type in ["bert", "layoutlm2"]
                 else None
             )  # RoBERTa don"t use segment_ids
             outputs = model(**inputs)
@@ -627,8 +627,8 @@ def run_seq_labeling(
 
     args = SimpleNamespace(
         data_dir=data_dir,  # The input data dir. Should contain the training files for the CoNLL-2003 NER task.
-        model_type=model_type,  # Model type selected in the list: " + ", ".join(layoutlm.run_seq_labeling.MODEL_CLASSES.keys())
-        model_name_or_path=model_name_or_path,  # Path to pre-trained model or shortcut name selected in the list: " + ", ".join(layoutlm.run_seq_labeling.ALL_MODELS),
+        model_type=model_type,  # Model type selected in the list: " + ", ".join(layoutlm2.run_seq_labeling.MODEL_CLASSES.keys())
+        model_name_or_path=model_name_or_path,  # Path to pre-trained model or shortcut name selected in the list: " + ", ".join(layoutlm2.run_seq_labeling.ALL_MODELS),
         output_dir=output_dir,  # The output directory where the model predictions and checkpoints will be written.
         labels=labels,  # Path to a file containing all labels. If not specified, CoNLL-2003 labels are used.
         config_name=config_name,  # Pretrained config name or path if not the same as model_name
