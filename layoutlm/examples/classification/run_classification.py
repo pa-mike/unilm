@@ -25,7 +25,7 @@ from transformers import (
 )
 
 from layoutlm import LayoutlmConfig, LayoutlmForSequenceClassification
-from layoutlm.data.rvl_cdip import CdipProcessor, load_and_cache_examples
+from layoutlm.data import CdipProcessor, load_and_cache_examples
 
 try:
     from torch.utils.tensorboard import SummaryWriter
